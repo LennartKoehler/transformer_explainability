@@ -3,7 +3,6 @@ from tqdm import tqdm
 import h5py
 
 import argparse
-
 # Import saliency methods and models
 from misc_functions import *
 

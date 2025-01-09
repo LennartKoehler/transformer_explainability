@@ -40,12 +40,18 @@ def compute_rollout_attention(all_layer_matrices, start_layer=0):
     num_tokens = all_layer_matrices[0].shape[1]
     batch_size = all_layer_matrices[0].shape[0]
     eye = torch.eye(num_tokens).expand(batch_size, num_tokens, num_tokens).to(all_layer_matrices[0].device)
-    all_layer_matrices = [all_layer_matrices[i] + eye for i in range(len(all_layer_matrices))]
+    all_layer_matrices = [all_layer_matrices[i] + eye for i in range(len(all_layer_matrices))] 
+    """
+    IMPORTANT here equation (13) is applied
+    all_layer_matrices is the mean(grad(A) * R)
+    identity matrix is the eye which is added
+    """
+    
     # all_layer_matrices = [all_layer_matrices[i] / all_layer_matrices[i].sum(dim=-1, keepdim=True)
     #                       for i in range(len(all_layer_matrices))]
     joint_attention = all_layer_matrices[start_layer]
     for i in range(start_layer+1, len(all_layer_matrices)):
-        joint_attention = all_layer_matrices[i].bmm(joint_attention)
+        joint_attention = all_layer_matrices[i].bmm(joint_attention) # IMPORTANT this is equation (14) of paper
     return joint_attention
 
 class Mlp(nn.Module):
@@ -329,7 +335,8 @@ class VisionTransformer(nn.Module):
         cam = self.pool.relprop(cam, **kwargs)
         cam = self.norm.relprop(cam, **kwargs)
         for blk in reversed(self.blocks):
-            cam = blk.relprop(cam, **kwargs)
+            cam = blk.relprop(cam, **kwargs) # IMPORTANT here running relprop on the transformer blocks always saves the cam (attn) to that block, this is then later accessed
+                                            # so even though cam is overwritten in transformer_attribution it cant be left out
 
         # print("conservation 2", cam.sum())
         # print("min", cam.min())
@@ -357,12 +364,12 @@ class VisionTransformer(nn.Module):
         elif method == "transformer_attribution" or method == "grad":
             cams = []
             for blk in self.blocks:
-                grad = blk.attn.get_attn_gradients()
-                cam = blk.attn.get_attn_cam()
+                grad = blk.attn.get_attn_gradients() # the gradients are saved in the forward pass
+                cam = blk.attn.get_attn_cam() # the cams are saved in the relprop pass
                 cam = cam[0].reshape(-1, cam.shape[-1], cam.shape[-1])
                 grad = grad[0].reshape(-1, grad.shape[-1], grad.shape[-1])
                 cam = grad * cam
-                cam = cam.clamp(min=0).mean(dim=0)
+                cam = cam.clamp(min=0).mean(dim=0) # IMPORTANT this is where the mean across heads is taken: equation (13)
                 cams.append(cam.unsqueeze(0))
             rollout = compute_rollout_attention(cams, start_layer=start_layer)
             cam = rollout[:, 0, 1:]

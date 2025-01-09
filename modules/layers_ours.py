@@ -94,7 +94,7 @@ class AvgPool2d(nn.AvgPool2d, RelPropSimple):
     pass
 
 
-class Add(RelPropSimple):
+class Add(RelPropSimple): # this is the skip connection mentioned in the paper (section 3.2 non parametric relevance propagation)
     def forward(self, inputs):
         return torch.add(*inputs)
 
