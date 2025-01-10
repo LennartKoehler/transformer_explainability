@@ -235,6 +235,7 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
+        inp = x
         # FIXME look at relaxing size constraints
         assert H == self.img_size[0] and W == self.img_size[1], \
             f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
@@ -372,7 +373,7 @@ class VisionTransformer(nn.Module):
                 cam = cam.clamp(min=0).mean(dim=0) # IMPORTANT this is where the mean across heads is taken: equation (13)
                 cams.append(cam.unsqueeze(0))
             rollout = compute_rollout_attention(cams, start_layer=start_layer)
-            cam = rollout[:, 0, 1:]
+            cam = rollout[:, 0, 1:] #IMPORTANT take 0 in 2nd dimension because this is the location of the class token
             return cam
             
         elif method == "last_layer":

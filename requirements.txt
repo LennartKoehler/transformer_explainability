@@ -1,6 +1,6 @@
 Pillow>=8.1.1
 einops == 0.3.0
-h5py == 2.8.0
+h5py == 2.9.0
 imageio == 2.9.0
 opencv_python
 scikit_image == 0.17.2

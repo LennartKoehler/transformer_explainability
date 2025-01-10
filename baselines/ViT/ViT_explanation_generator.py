@@ -27,10 +27,18 @@ class LRP:
         kwargs = {"alpha": 1}
         if index == None:
             index = np.argmax(output.cpu().data.numpy(), axis=-1)
+        """
+        IMPORTANT this one_hot is created and used for relprop as input (same shape as output of model.forward())
+        because we want to get rid of the uncertainty of the models output:
+        lets say a model has the output [0.2, 0.3, 0.5]
+        then the one_hot of that vector is [0, 0, 1]
+        this is useful because the argmax of the output is taken for classification
+        so may aswell use the argmax for relprop which is basically the one_hot
+        """
 
         one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
         one_hot[0, index] = 1
-        one_hot_vector = one_hot
+        one_hot_vector = one_hot 
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
         one_hot = torch.sum(one_hot.cuda() * output)
 
